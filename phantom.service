@@ -1,0 +1,29 @@
+[Unit]
+Description=PHANTOM Adaptive Regime Trading Engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lvolk
+WorkingDirectory=/home/lvolk/trade-bot
+ExecStart=/usr/bin/python -u main.py
+EnvironmentFile=/home/lvolk/trade-bot/.env
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=phantom
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/lvolk/trade-bot
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
