@@ -35,15 +35,12 @@ EXCHANGE_CONFIG = {
 # =============================================================================
 # TRADING PAIRS & TIMEFRAMES
 # =============================================================================
-# ETH dropped — 35.9% WR over 180 days, consistent loser on 15m
-TRADING_PAIRS = ["BTC/USDT:USDT", "SOL/USDT:USDT"]
+# $100 account — SOL only. BTC minimum order ($77) exceeds safe position size.
+TRADING_PAIRS = ["SOL/USDT:USDT"]
 
-# Per-asset strategy mode: which strategies are allowed per pair
-# BTC: mean reversion works, trend-following chops. Allow both but prefer MR.
-# SOL: trend-following dominates. MR is weak on SOL (least mean-reverting).
+# Per-asset strategy mode
 ASSET_STRATEGY_MODE = {
-    "BTC/USDT:USDT": ["mean_reversion", "trend"],   # MR preferred
-    "SOL/USDT:USDT": ["trend"],                       # trend only
+    "SOL/USDT:USDT": ["trend"],                       # trend only — SOL's edge
 }
 TIMEFRAME = "15m"
 HTF_TIMEFRAME = "1h"           # higher timeframe for trend direction
@@ -132,7 +129,9 @@ REDUCED_SIZE_FACTOR = 0.5       # 50% size outside prime hours
 # =============================================================================
 # RISK MANAGEMENT
 # =============================================================================
-MAX_RISK_PER_TRADE = 0.01       # 1% of account per trade
+# At $100, 1% risk = $1 which sizes below SOL minimum (0.1 SOL = $8.80).
+# Real risk per trade is ~3% at this balance. Acceptable for micro account.
+MAX_RISK_PER_TRADE = 0.03       # 3% for $100 micro account — scale down to 1% at $500+
 LEVERAGE = 1
 
 # Chandelier Exit ATR multipliers (per-asset)
@@ -158,14 +157,14 @@ MIN_ORDER_SIZE = {
 }
 MIN_ORDER_SIZE_DEFAULT = 0.001
 
-# Correlation filter — don't go same direction on BTC + ETH simultaneously
-CORRELATION_FILTER_ENABLED = True
+# Correlation filter — not needed with single pair
+CORRELATION_FILTER_ENABLED = False
 
-# Daily drawdown limit — stop trading if hit
-DAILY_DRAWDOWN_LIMIT = 0.03     # 3%
+# Daily drawdown limit — wider for micro account (one bad trade = 3%)
+DAILY_DRAWDOWN_LIMIT = 0.10     # 10% — $10 on a $100 account
 
-# Max concurrent positions
-MAX_OPEN_POSITIONS = 2          # reduced from 3 — correlation-aware
+# Max concurrent positions — one pair, one position
+MAX_OPEN_POSITIONS = 1
 
 # =============================================================================
 # TELEGRAM

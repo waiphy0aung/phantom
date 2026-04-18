@@ -28,7 +28,7 @@ class PaperTrader:
     """Simulates order execution for paper trading mode."""
 
     def __init__(self):
-        self.balance = 10_000.0
+        self.balance = 100.0  # match live account size for realistic paper testing
         self.positions: dict[str, dict] = {}
         self.order_id = 0
         self.trade_history: list[dict] = []
