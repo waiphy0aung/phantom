@@ -106,48 +106,51 @@ def _trend_signal(df: pd.DataFrame, regime: RegimeState, symbol: str) -> TradeSi
     htf_bullish = regime.htf_direction == 1
     htf_bearish = regime.htf_direction == -1
 
-    # --- BUY: squeeze fires bullish + HMA bullish cross + 1H bullish ---
+    # HMA must agree with direction for any trend entry.
+    # Squeeze breakout is the primary trigger. HMA-only is secondary but
+    # requires the squeeze was recently on (within last 5 bars) for context.
+    recent_squeeze = any(squeeze["squeeze_on"].iloc[-6:-1])
+
+    # --- BUY: 1H bullish + volume + (squeeze fire OR HMA cross with recent squeeze) ---
     if htf_bullish and vol_confirmed:
-        # Primary: squeeze breakout
-        if squeeze_fired and momentum > 0 and momentum > momentum_prev:
+        if squeeze_fired and momentum > 0 and momentum > momentum_prev and hma_fast_now > hma_slow_now:
             sl = ce["long_stop"].iloc[-1]
-            reason = f"Squeeze breakout UP | Mom={momentum:.4f} | Vol={vol_ratio.iloc[-1]:.1f}x"
+            reason = f"Squeeze+HMA UP | Mom={momentum:.4f} | Vol={vol_ratio.iloc[-1]:.1f}x"
             logger.info(f">>> TREND BUY: {symbol} | {reason}")
             return TradeSignal(
                 signal=Signal.BUY, source="trend", symbol=symbol,
                 price=price_now, stop_loss=sl, take_profit=None,
                 confidence=0.8, reason=reason,
             )
-        # Secondary: HMA crossover in trending regime
-        if bullish_hma:
+        if bullish_hma and recent_squeeze and hma_fast_now > hma_slow_now:
             sl = ce["long_stop"].iloc[-1]
-            reason = f"HMA crossover UP | HMA9={hma_fast_now:.2f} > HMA21={hma_slow_now:.2f}"
+            reason = f"HMA cross UP (post-squeeze) | HMA9={hma_fast_now:.2f} > HMA21={hma_slow_now:.2f}"
             logger.info(f">>> TREND BUY: {symbol} | {reason}")
             return TradeSignal(
                 signal=Signal.BUY, source="trend", symbol=symbol,
                 price=price_now, stop_loss=sl, take_profit=None,
-                confidence=0.6, reason=reason,
+                confidence=0.7, reason=reason,
             )
 
-    # --- SELL: squeeze fires bearish + HMA bearish cross + 1H bearish ---
+    # --- SELL: 1H bearish + volume + (squeeze fire OR HMA cross with recent squeeze) ---
     if htf_bearish and vol_confirmed:
-        if squeeze_fired and momentum < 0 and momentum < momentum_prev:
+        if squeeze_fired and momentum < 0 and momentum < momentum_prev and hma_fast_now < hma_slow_now:
             sl = ce["short_stop"].iloc[-1]
-            reason = f"Squeeze breakout DOWN | Mom={momentum:.4f} | Vol={vol_ratio.iloc[-1]:.1f}x"
+            reason = f"Squeeze+HMA DOWN | Mom={momentum:.4f} | Vol={vol_ratio.iloc[-1]:.1f}x"
             logger.info(f">>> TREND SELL: {symbol} | {reason}")
             return TradeSignal(
                 signal=Signal.SELL, source="trend", symbol=symbol,
                 price=price_now, stop_loss=sl, take_profit=None,
                 confidence=0.8, reason=reason,
             )
-        if bearish_hma:
+        if bearish_hma and recent_squeeze and hma_fast_now < hma_slow_now:
             sl = ce["short_stop"].iloc[-1]
-            reason = f"HMA crossover DOWN | HMA9={hma_fast_now:.2f} < HMA21={hma_slow_now:.2f}"
+            reason = f"HMA cross DOWN (post-squeeze) | HMA9={hma_fast_now:.2f} < HMA21={hma_slow_now:.2f}"
             logger.info(f">>> TREND SELL: {symbol} | {reason}")
             return TradeSignal(
                 signal=Signal.SELL, source="trend", symbol=symbol,
                 price=price_now, stop_loss=sl, take_profit=None,
-                confidence=0.6, reason=reason,
+                confidence=0.7, reason=reason,
             )
 
     return None
@@ -179,9 +182,9 @@ def _mean_reversion_signal(df: pd.DataFrame, regime: RegimeState, symbol: str) -
     if pd.isna(z_now) or pd.isna(rsi_now):
         return None
 
-    # Stop-loss: 2x ATR from entry — wide enough to survive noise,
-    # tight enough to limit damage if regime shifts under us
-    mr_stop_atr_mult = 2.0
+    # Stop-loss: 1.2x ATR — tight. MR trades should revert quickly
+    # or they're wrong. 2x ATR was too wide, losses exceeded MR profits.
+    mr_stop_atr_mult = 1.2
 
     # --- LONG: price significantly below VWAP + RSI oversold + volume climax ---
     if z_now < -config.ZSCORE_ENTRY and rsi_now < config.MR_RSI_LONG and vol_confirmed:
@@ -215,20 +218,21 @@ def _mean_reversion_signal(df: pd.DataFrame, regime: RegimeState, symbol: str) -
 def generate_signal(df_15m: pd.DataFrame, df_1h: pd.DataFrame,
                     regime: RegimeState, symbol: str) -> TradeSignal | None:
     """
-    Master signal generator. Routes to trend or mean reversion based on regime.
-    Returns None if no actionable signal.
+    Master signal generator. Routes to trend or mean reversion based on regime
+    AND per-asset strategy mode. SOL = trend only. BTC = both (MR preferred).
     """
     if len(df_15m) < config.CANDLE_LIMIT - 10:
         logger.warning(f"{symbol}: Insufficient 15m data ({len(df_15m)} bars)")
         return None
 
-    if regime.regime == Regime.TRENDING:
+    allowed = config.ASSET_STRATEGY_MODE.get(symbol, ["trend", "mean_reversion"])
+
+    if regime.regime == Regime.TRENDING and "trend" in allowed:
         return _trend_signal(df_15m, regime, symbol)
 
-    elif regime.regime == Regime.RANGING:
+    elif regime.regime == Regime.RANGING and "mean_reversion" in allowed:
         return _mean_reversion_signal(df_15m, regime, symbol)
 
     else:
-        # UNCERTAIN — no new entries
-        logger.debug(f"{symbol}: Regime UNCERTAIN — sitting out")
+        logger.debug(f"{symbol}: Regime {regime.regime.value} — no allowed strategy")
         return None

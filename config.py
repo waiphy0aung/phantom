@@ -35,7 +35,16 @@ EXCHANGE_CONFIG = {
 # =============================================================================
 # TRADING PAIRS & TIMEFRAMES
 # =============================================================================
-TRADING_PAIRS = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+# ETH dropped — 35.9% WR over 180 days, consistent loser on 15m
+TRADING_PAIRS = ["BTC/USDT:USDT", "SOL/USDT:USDT"]
+
+# Per-asset strategy mode: which strategies are allowed per pair
+# BTC: mean reversion works, trend-following chops. Allow both but prefer MR.
+# SOL: trend-following dominates. MR is weak on SOL (least mean-reverting).
+ASSET_STRATEGY_MODE = {
+    "BTC/USDT:USDT": ["mean_reversion", "trend"],   # MR preferred
+    "SOL/USDT:USDT": ["trend"],                       # trend only
+}
 TIMEFRAME = "15m"
 HTF_TIMEFRAME = "1h"           # higher timeframe for trend direction
 CANDLE_LIMIT = 200             # need more data for regime detection
@@ -86,17 +95,17 @@ TREND_VOLUME_MULTIPLIER = 1.5
 # =============================================================================
 # VWAP Z-Score
 VWAP_PERIOD = 96               # 96 bars of 15m = 24 hours
-ZSCORE_ENTRY = 2.0             # enter mean reversion at |Z| > 2.0
+ZSCORE_ENTRY = 1.5             # enter mean reversion at |Z| > 1.5 (was 2.0 — never fired)
 ZSCORE_STOP = 3.5              # hard stop if Z goes beyond 3.5
 ZSCORE_EXIT = 0.0              # exit when Z returns to 0
 
 # RSI confirmation
 MR_RSI_PERIOD = 9
-MR_RSI_LONG = 25               # RSI below this confirms long
-MR_RSI_SHORT = 75              # RSI above this confirms short
+MR_RSI_LONG = 30               # RSI below this confirms long (was 25 — too strict)
+MR_RSI_SHORT = 70              # RSI above this confirms short (was 75 — too strict)
 
 # Volume for mean reversion (selling/buying climax)
-MR_VOLUME_MULTIPLIER = 2.0
+MR_VOLUME_MULTIPLIER = 1.5     # was 2.0 — climax volume is rare on 15m
 
 # Time stop (bars)
 MR_TIME_STOP_DEFAULT = 20      # BTC, ETH
@@ -135,6 +144,11 @@ CHANDELIER_MULTIPLIER = {
 }
 # Default for unknown pairs
 CHANDELIER_MULTIPLIER_DEFAULT = 3.0
+
+# Trading fees (for backtesting)
+TAKER_FEE = 0.00055            # 0.055% Bybit taker fee per side
+MAKER_FEE = 0.0002             # 0.02% Bybit maker fee per side
+USE_MAKER_FEES = False         # assume taker (market orders) by default
 
 # Minimum order sizes (exchange-enforced)
 MIN_ORDER_SIZE = {
