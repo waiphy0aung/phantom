@@ -31,6 +31,14 @@ from strategy import generate_signal, Signal
 logging.basicConfig(level=logging.WARNING, format="%(message)s")
 logger = logging.getLogger("backtest")
 
+# Fee per side (entry + exit = 2x this)
+FEE_RATE = config.MAKER_FEE if config.USE_MAKER_FEES else config.TAKER_FEE
+
+
+def calc_fees(amount: float, entry_price: float, exit_price: float) -> float:
+    """Total round-trip fees for a trade."""
+    return amount * entry_price * FEE_RATE + amount * exit_price * FEE_RATE
+
 
 # =============================================================================
 # Data fetching
@@ -122,6 +130,7 @@ class BacktestResult:
     trades: list[Trade] = field(default_factory=list)
     equity_curve: list[float] = field(default_factory=list)
     start_balance: float = 10000.0
+    total_fees: float = 0.0
 
     @property
     def total_trades(self) -> int:
@@ -344,13 +353,18 @@ def run_backtest(
 
                 if should_close:
                     if pos.side == "long":
-                        pnl = (current_price - pos.entry_price) * pos.amount
+                        raw_pnl = (current_price - pos.entry_price) * pos.amount
                     else:
-                        pnl = (pos.entry_price - current_price) * pos.amount
+                        raw_pnl = (pos.entry_price - current_price) * pos.amount
+
+                    fees = calc_fees(pos.amount, pos.entry_price, current_price)
+                    pnl = raw_pnl - fees
+                    result.total_fees += fees
 
                     balance += pos.amount * current_price if pos.side == "long" else (
-                        pos.amount * pos.entry_price + pnl
+                        pos.amount * pos.entry_price + raw_pnl
                     )
+                    balance -= fees
 
                     pnl_pct = pnl / (pos.entry_price * pos.amount) * 100
 
@@ -388,7 +402,7 @@ def run_backtest(
                     if size < min_size:
                         continue
 
-                    # Deduct cost
+                    # Deduct cost + entry fee
                     cost = size * current_price
                     if cost > balance:
                         continue
@@ -423,13 +437,18 @@ def run_backtest(
     for symbol, pos in list(positions.items()):
         last_price = float(data_15m[symbol]["close"].iloc[-1])
         if pos.side == "long":
-            pnl = (last_price - pos.entry_price) * pos.amount
+            raw_pnl = (last_price - pos.entry_price) * pos.amount
         else:
-            pnl = (pos.entry_price - last_price) * pos.amount
+            raw_pnl = (pos.entry_price - last_price) * pos.amount
+
+        fees = calc_fees(pos.amount, pos.entry_price, last_price)
+        pnl = raw_pnl - fees
+        result.total_fees += fees
 
         balance += pos.amount * last_price if pos.side == "long" else (
-            pos.amount * pos.entry_price + pnl
+            pos.amount * pos.entry_price + raw_pnl
         )
+        balance -= fees
         pnl_pct = pnl / (pos.entry_price * pos.amount) * 100
         bars_held = total_bars - pos.entry_bar
 
@@ -482,6 +501,8 @@ def print_report(result: BacktestResult, days: int):
   Sharpe Ratio:     {result.sharpe_ratio:.2f}
   Max Drawdown:     {result.max_drawdown:.2f}%
   Avg Hold Time:    {result.avg_bars_held:.0f} bars ({result.avg_bars_held * 15 / 60:.1f}h)
+  Total Fees:       ${result.total_fees:,.2f}
+  Fee Rate:         {FEE_RATE*100:.3f}% per side
 """)
 
     # By strategy source
