@@ -5,6 +5,9 @@ All pure functions operating on pandas Series/DataFrames.
 No side effects, no state, no exchange calls.
 """
 
+from __future__ import annotations
+
+
 import numpy as np
 import pandas as pd
 

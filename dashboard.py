@@ -11,6 +11,9 @@ Real-time terminal UI showing everything you need at a glance:
 Uses Rich library for clean, formatted terminal output.
 """
 
+from __future__ import annotations
+
+
 from datetime import datetime, timezone
 
 from rich.console import Console

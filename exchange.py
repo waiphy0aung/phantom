@@ -10,6 +10,9 @@ Wraps CCXT for all exchange operations. Handles:
 Paper mode uses real market data with simulated fills.
 """
 
+from __future__ import annotations
+
+
 import logging
 from datetime import datetime, timezone
 

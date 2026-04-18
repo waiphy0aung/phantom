@@ -6,6 +6,9 @@ Live terminal dashboard with real-time market data.
 WARNING: This trades real money in LIVE mode. Paper trade first.
 """
 
+from __future__ import annotations
+
+
 import logging
 import sys
 import time

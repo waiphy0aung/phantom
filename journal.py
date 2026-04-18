@@ -5,6 +5,9 @@ Survives restarts. Loads history on startup for performance calculations.
 Every trade gets logged: entry, exit, PnL, regime, strategy source.
 """
 
+from __future__ import annotations
+
+
 import csv
 import os
 from dataclasses import dataclass, field, asdict

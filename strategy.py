@@ -16,6 +16,9 @@ RANGING: VWAP Z-Score mean reversion + RSI(9) confirmation
 UNCERTAIN: No new entries. Manage existing positions only.
 """
 
+from __future__ import annotations
+
+
 import logging
 from dataclasses import dataclass
 from enum import Enum

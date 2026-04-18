@@ -12,6 +12,9 @@ Rules:
 The strategy finds trades. Risk management keeps you alive to trade tomorrow.
 """
 
+from __future__ import annotations
+
+
 import logging
 from datetime import datetime, timezone
 

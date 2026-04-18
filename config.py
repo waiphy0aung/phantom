@@ -6,6 +6,9 @@ WARNING: Never commit real API keys to version control.
 Use environment variables or a .env file in production.
 """
 
+from __future__ import annotations
+
+
 import os
 
 from dotenv import load_dotenv

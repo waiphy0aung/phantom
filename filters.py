@@ -11,6 +11,9 @@ These filters use data unique to perpetual futures markets:
 Each filter returns a pass/fail with a sizing multiplier.
 """
 
+from __future__ import annotations
+
+
 import logging
 from datetime import datetime, timezone
 

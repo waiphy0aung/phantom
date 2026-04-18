@@ -9,6 +9,9 @@ Uses a three-indicator ensemble to classify the market:
 The single biggest edge is knowing when NOT to trade trend-following.
 """
 
+from __future__ import annotations
+
+
 import logging
 from enum import Enum
 

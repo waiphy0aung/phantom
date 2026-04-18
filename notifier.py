@@ -5,6 +5,9 @@ Every trade, every error, every daily summary — delivered to your phone.
 No silent failures. If the bot does something, you know about it.
 """
 
+from __future__ import annotations
+
+
 import logging
 from datetime import datetime, timezone
 
