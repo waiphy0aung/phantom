@@ -4,3 +4,4 @@ __pycache__/
 trade_bot.log
 trades.csv
 balance_history.csv
+phantom.service
